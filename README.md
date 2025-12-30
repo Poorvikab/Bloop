@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-Latest-green.svg)](https://ffmpeg.org/)
 
-![UI Demo](assets/images/landing.jpeg)  
+![UI Demo](assets/images/image.png)  
 
 </div>
 
