@@ -10,6 +10,8 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![FFmpeg](https://img.shields.io/badge/FFmpeg-Latest-green.svg)](https://ffmpeg.org/)
 
+![UI Demo](assets/images/landing.jpeg)  
+
 </div>
 
 ---
@@ -82,7 +84,7 @@ FastAPI Gateway (QA Service)
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/bloop.git
+git clone https://github.com/poorvikab/bloop.git
 cd bloop
 ```
 
@@ -713,15 +715,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
-- **Documentation**: [docs.bloop.ai](https://docs.bloop.ai)
-- **GitHub Issues**: [Report bugs](https://github.com/your-username/bloop/issues)
-- **Discussions**: [Community forum](https://github.com/your-username/bloop/discussions)
-- **Email**: support@bloop.ai
+- **Documentation**: [docs.bloop.ai](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
+- **GitHub Issues**: [Report bugs](https://github.com/poorvikab/bloop/issues)
+- **Discussions**: [Community forum](https://github.com/poorvikab/bloop/discussions)
+- **Email**: poorvikagrover@gmail.com
 
 ### FAQ
 
 **Q: How long does it take to generate content?**  
-A: Video generation takes 45-90 seconds for a 1-minute video. Flashcards and quizzes generate in 10-20 seconds. Roadmaps take 30-90 seconds depending on complexity.
+A: Video generation takes 45-90 seconds for a 2-minute video. Flashcards and quizzes generate in 10-20 seconds. Roadmaps take around 20 seconds depending on complexity.
 
 **Q: Can I use my own avatar image?**  
 A: Yes! Upload any portrait image and Bloop will animate it with synchronized lip movements.
@@ -768,19 +770,19 @@ https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
 *Complete educational video with animation and avatar in production quality*
 
 ### Learning Roadmap Generation
-![Roadmap Demo](assets/gifs/roadmap_generation.gif)  
+![Roadmap Demo](assets/images/plan.jpeg)  
 *AI-generated personalized learning paths with milestones and resources*
 
 ### Interactive Learning Games
-![Games Demo](assets/gifs/games_showcase.gif)  
+![Games Demo](assets/images/games.jpeg)  
 *Engaging educational games: Teach the AI, Drag & Drop, Identify the Error*
 
 ### Flashcard Generation
-![Flashcard Demo](assets/gifs/flashcard_generation.gif)  
+![Flashcard Demo](assets/images/flashcard.jpeg)  
 *Automatic flashcard generation from documents with spaced repetition*
 
 ### Quiz Generation
-![Quiz Demo](assets/gifs/quiz_generation.gif)  
+![Quiz Demo](assets/images/quiz.jpeg)  
 *Intelligent quiz creation with multiple question types and adaptive difficulty*
 
 ---
@@ -789,6 +791,6 @@ https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
 
 ### Ready to transform education?
 
-[View Demo](https://demo.bloop.ai) • [Read Docs](https://docs.bloop.ai)
+[View Demo](PENDING) • [Read Docs](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
 
 </div>
