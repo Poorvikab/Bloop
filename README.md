@@ -32,9 +32,17 @@ Bloop revolutionizes educational content creation by generating **fully animated
 - 🎮 **Interactive Learning Games** - Engaging educational games with voice interaction
 
 ## Demo Gallery
+### Final Side-by-Side Video
+
+https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
+  
+*Complete educational video with animation and avatar in production quality*
+
 
 ### Manim Animation Generation
+
 https://github.com/user-attachments/assets/22dc0812-2cbd-46d5-aa41-5f16c1fd001a 
+
 *Real-time generation of mathematical visualizations with LaTeX rendering*
 
 
@@ -44,11 +52,6 @@ https://github.com/user-attachments/assets/1249e51c-139a-4e04-98e2-df493dfe209c
 
 *Photorealistic avatar with synchronized lip movements and natural expressions*
 
-### Final Side-by-Side Video
-
-https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
-  
-*Complete educational video with animation and avatar in production quality*
 
 ### Learning Roadmap Generation
 ![Roadmap Demo](assets/images/plan.jpeg)  
