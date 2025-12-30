@@ -68,8 +68,6 @@ https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
 
 ---
 
-<div align="center">
-
 
 ## 🏗️ Architecture
 
@@ -789,6 +787,8 @@ A: PDF, DOCX, TXT, and plain text input are all supported for content generation
 - **All Contributors** who made this possible
 
 ---
+<div align="center">
+
 
 ### Ready to transform education?
 
