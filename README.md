@@ -31,6 +31,46 @@ Bloop revolutionizes educational content creation by generating **fully animated
 - 🗺️ **Personalized Roadmaps** - AI-generated learning paths tailored to your level
 - 🎮 **Interactive Learning Games** - Engaging educational games with voice interaction
 
+## Demo Gallery
+
+### Manim Animation Generation
+https://github.com/user-attachments/assets/22dc0812-2cbd-46d5-aa41-5f16c1fd001a 
+*Real-time generation of mathematical visualizations with LaTeX rendering*
+
+
+### Talking Avatar (SadTalker)
+
+https://github.com/user-attachments/assets/1249e51c-139a-4e04-98e2-df493dfe209c
+
+*Photorealistic avatar with synchronized lip movements and natural expressions*
+
+### Final Side-by-Side Video
+
+https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
+  
+*Complete educational video with animation and avatar in production quality*
+
+### Learning Roadmap Generation
+![Roadmap Demo](assets/images/plan.jpeg)  
+*AI-generated personalized learning paths with milestones and resources*
+
+### Interactive Learning Games
+![Games Demo](assets/images/games.jpeg)  
+*Engaging educational games: Teach the AI, Drag & Drop, Identify the Error*
+
+### Flashcard Generation
+![Flashcard Demo](assets/images/flashcard.jpeg)  
+*Automatic flashcard generation from documents with spaced repetition*
+
+### Quiz Generation
+![Quiz Demo](assets/images/quiz.jpeg)  
+*Intelligent quiz creation with multiple question types and adaptive difficulty*
+
+---
+
+<div align="center">
+
+
 ## 🏗️ Architecture
 
 Bloop employs a sophisticated microservices architecture designed for real-time video generation:
@@ -749,45 +789,6 @@ A: PDF, DOCX, TXT, and plain text input are all supported for content generation
 - **All Contributors** who made this possible
 
 ---
-
-## Demo Gallery
-
-### Manim Animation Generation
-https://github.com/user-attachments/assets/22dc0812-2cbd-46d5-aa41-5f16c1fd001a 
-*Real-time generation of mathematical visualizations with LaTeX rendering*
-
-
-### Talking Avatar (SadTalker)
-
-https://github.com/user-attachments/assets/1249e51c-139a-4e04-98e2-df493dfe209c
-
-*Photorealistic avatar with synchronized lip movements and natural expressions*
-
-### Final Side-by-Side Video
-
-https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
-  
-*Complete educational video with animation and avatar in production quality*
-
-### Learning Roadmap Generation
-![Roadmap Demo](assets/images/plan.jpeg)  
-*AI-generated personalized learning paths with milestones and resources*
-
-### Interactive Learning Games
-![Games Demo](assets/images/games.jpeg)  
-*Engaging educational games: Teach the AI, Drag & Drop, Identify the Error*
-
-### Flashcard Generation
-![Flashcard Demo](assets/images/flashcard.jpeg)  
-*Automatic flashcard generation from documents with spaced repetition*
-
-### Quiz Generation
-![Quiz Demo](assets/images/quiz.jpeg)  
-*Intelligent quiz creation with multiple question types and adaptive difficulty*
-
----
-
-<div align="center">
 
 ### Ready to transform education?
 
