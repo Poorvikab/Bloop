@@ -281,38 +281,8 @@ Bloop is designed with **failure as a first-class consideration**:
 ```
 ---
 
-## **11. Experimental Results**
 
-During hackathon evaluation, Bloop successfully generated:
-
-* Multi-scene STEM explainer videos
-* Real-time Manim animations
-* Fully synchronized narration
-* Side-by-side avatar videos
-
-Judges highlighted **system depth, integration complexity, and robustness**.
-
----
-
-## **12. Limitations**
-
-* Rendering time increases with scene complexity
-* GPU acceleration not yet applied to Manim
-* Avatar generation latency depends on SadTalker model
-
----
-
-## **13. Future Work**
-
-* Adaptive pacing based on learner profile
-* Emotion-aware avatar narration
-* Interactive timelines
-* Classroom-scale batch rendering
-* Cloud-native job scheduling
-
----
-
-## **14. Conclusion**
+## **11. Conclusion**
 
 Bloop demonstrates that **real-time, fully visual educational video generation** is feasible using current generative AI systems when combined with disciplined system design.
 
@@ -326,24 +296,15 @@ By treating visuals, audio, and avatars as first-class outputs—and by embracin
 
 ### 🧮 Manim Animation Generation
 
-![Manim Animation Demo](assets/gifs/manim_generation.gif)
+![Manim Animation Demo](assets/gifs/manim_generation.mp4)
 
-### 🔊 Scene-Aligned Narration
-
-![TTS Sync Demo](assets/gifs/tts_sync.gif)
 
 ### 🤖 Talking Avatar (SadTalker)
 
-![Avatar Demo](assets/gifs/avatar_generation.gif)
+![Avatar Demo](assets/gifs/avatar_generation.mp4)
 
 ### 🧩 Final Side-by-Side Video
 
-![Final Video Demo](assets/gifs/final_output.gif)
-
----
-
-## 🏆 Hackathon Recognition
-
-> *“One of the most technically complete real-time AI pipelines we’ve seen. Exceptional integration of Manim and avatar-based explanation.”*
+![Final Video Demo](assets/gifs/final_video.mp4)
 
 ---
