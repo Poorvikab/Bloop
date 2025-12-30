@@ -296,15 +296,16 @@ By treating visuals, audio, and avatars as first-class outputs—and by embracin
 
 ### 🧮 Manim Animation Generation
 
-![Manim Animation Demo](assets/gifs/manim_generation.mp4)
+<video src="https://github.com/poorvikab/bloop/raw/main/assets/gifs/manim_generation.mp4" controls width="100%"></video>
+
 
 
 ### 🤖 Talking Avatar (SadTalker)
 
-![Avatar Demo](assets/gifs/avatar_generation.mp4)
+<video src="https://github.com/poorvikab/bloop/raw/main/assets/gifs/avatar_generation.mp4" controls width="100%"></video>
 
 ### 🧩 Final Side-by-Side Video
 
-![Final Video Demo](assets/gifs/final_video.mp4)
+<video src="https://github.com/poorvikab/bloop/raw/main/assets/gifs/final_video.mp4" controls width="100%"></video>
 
 ---
