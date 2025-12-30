@@ -222,32 +222,5 @@ Bloop demonstrates that **real-time, fully visual educational video generation**
 
 By treating visuals, audio, and avatars as first-class outputs—and by embracing fault tolerance—Bloop moves beyond text-based education toward **explainable, visual intelligence**.
 
----
 
-# 🎞️ Demo & GIF Previews
 
-> Replace these placeholders with actual GIFs once uploaded.
-
-### 🧮 Manim Animation Generation
-
-![Manim Animation Demo](assets/gifs/manim_generation.gif)
-
-### 🔊 Scene-Aligned Narration
-
-![TTS Sync Demo](assets/gifs/tts_sync.gif)
-
-### 🤖 Talking Avatar (SadTalker)
-
-![Avatar Demo](assets/gifs/avatar_generation.gif)
-
-### 🧩 Final Side-by-Side Video
-
-![Final Video Demo](assets/gifs/final_output.gif)
-
----
-
-## 🏆 Hackathon Recognition
-
-> *“One of the most technically complete real-time AI pipelines we’ve seen. Exceptional integration of Manim and avatar-based explanation.”*
-
----
