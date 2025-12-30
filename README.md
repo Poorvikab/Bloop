@@ -758,7 +758,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Documentation**: [docs.bloop.ai](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
 - **GitHub Issues**: [Report bugs](https://github.com/poorvikab/bloop/issues)
-- **Discussions**: [Community forum](https://github.com/poorvikab/bloop/discussions)
 - **Email**: poorvikagrover@gmail.com
 
 ### FAQ
