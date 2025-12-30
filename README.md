@@ -791,6 +791,6 @@ https://github.com/user-attachments/assets/3b23c1ed-3a2c-4be1-b9c2-a9accf128418
 
 ### Ready to transform education?
 
-[View Demo](PENDING) • [Read Docs](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
+[Read Docs](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
 
 </div>
