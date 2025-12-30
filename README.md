@@ -118,7 +118,7 @@ OPENAI_API_KEY=your-openai-api-key
 AZURE_OPENAI_ENDPOINT=your-azure-endpoint  # Optional
 
 # TTS Configuration
-TTS_PROVIDER=azure  # or 'elevenlabs', 'google'
+TTS_PROVIDER=azure 
 AZURE_SPEECH_KEY=your-speech-key
 AZURE_SPEECH_REGION=eastus
 

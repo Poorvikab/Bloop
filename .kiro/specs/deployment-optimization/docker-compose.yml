@@ -1,0 +1,174 @@
+# Docker Compose for Local Development
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ../../../
+      dockerfile: backend/Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DATABASE_URL=postgresql://bloop:bloop@postgres:5432/bloop
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    volumes:
+      - ../../../backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ASK Service
+  ask-service:
+    build:
+      context: ../../../
+      dockerfile: backend/Dockerfile.ask
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://bloop:bloop@postgres:5432/bloop
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+      - postgres
+    volumes:
+      - ../../../backend:/app
+
+  # Video Generation Service
+  video-service:
+    build:
+      context: ../../../
+      dockerfile: backend/Dockerfile.video
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - redis
+      - rabbitmq
+    volumes:
+      - ../../../backend:/app
+      - video-cache:/app/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Avatar Service
+  avatar-service:
+    build:
+      context: ../../../
+      dockerfile: backend/Dockerfile.avatar
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - SADTALKER_MODEL_PATH=/models/sadtalker
+    depends_on:
+      - redis
+      - rabbitmq
+    volumes:
+      - ../../../ai_models/SadTalker:/models/sadtalker
+      - avatar-cache:/app/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: ../../../
+      dockerfile: backend/Dockerfile.worker
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+      - DATABASE_URL=postgresql://bloop:bloop@postgres:5432/bloop
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+    volumes:
+      - ../../../backend:/app
+    command: celery -A app.worker worker --loglevel=info
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=bloop
+      - RABBITMQ_DEFAULT_PASS=bloop
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=bloop
+      - POSTGRES_PASSWORD=bloop
+      - POSTGRES_DB=bloop
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../../../backend/migrations:/docker-entrypoint-initdb.d
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:
+  video-cache:
+  avatar-cache:

@@ -1,0 +1,326 @@
+# GitHub Actions CI/CD Pipeline for Bloop Platform
+name: Bloop Platform CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # Job 1: Run Tests
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: bloop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+      
+      - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/bloop_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          pytest tests/unit --cov=app --cov-report=xml --cov-report=term
+      
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/bloop_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          pytest tests/integration -v
+      
+      - name: Run property-based tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/bloop_test
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          pytest tests/property -v --hypothesis-show-statistics
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Job 2: Build and Push Docker Images
+  build:
+    name: Build Docker Images
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - ask-service
+          - plan-service
+          - play-service
+          - video-service
+          - avatar-service
+          - worker
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./backend/Dockerfile.${{ matrix.service }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Job 3: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.bloop.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+      
+      - name: Deploy to staging
+        run: |
+          # Update image tags
+          kubectl set image deployment/api-gateway \
+            api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api-gateway:${{ github.sha }} \
+            -n bloop-staging
+          
+          kubectl set image deployment/video-service \
+            video-service=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/video-service:${{ github.sha }} \
+            -n bloop-staging
+          
+          kubectl set image deployment/avatar-service \
+            avatar-service=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avatar-service:${{ github.sha }} \
+            -n bloop-staging
+      
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/api-gateway -n bloop-staging --timeout=5m
+          kubectl rollout status deployment/video-service -n bloop-staging --timeout=5m
+          kubectl rollout status deployment/avatar-service -n bloop-staging --timeout=5m
+      
+      - name: Run smoke tests
+        run: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Test health endpoint
+          curl -f https://staging.bloop.ai/health || exit 1
+          
+          # Test API endpoint
+          curl -f https://staging.bloop.ai/api/v1/health || exit 1
+
+  # Job 4: Performance Tests on Staging
+  performance-test:
+    name: Performance Tests
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install Locust
+        run: pip install locust
+      
+      - name: Run load tests
+        run: |
+          cd tests/performance
+          locust -f locustfile.py \
+            --host https://staging.bloop.ai \
+            --users 100 \
+            --spawn-rate 10 \
+            --run-time 5m \
+            --headless \
+            --html report.html
+      
+      - name: Upload performance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-report
+          path: tests/performance/report.html
+      
+      - name: Check performance thresholds
+        run: |
+          python tests/performance/check_thresholds.py report.html
+
+  # Job 5: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    needs: [build, performance-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.bloop.ai
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+      
+      - name: Deploy to production
+        run: |
+          # Update image tags
+          kubectl set image deployment/api-gateway \
+            api-gateway=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api-gateway:${{ github.sha }} \
+            -n bloop-prod
+          
+          kubectl set image deployment/video-service \
+            video-service=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/video-service:${{ github.sha }} \
+            -n bloop-prod
+          
+          kubectl set image deployment/avatar-service \
+            avatar-service=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/avatar-service:${{ github.sha }} \
+            -n bloop-prod
+      
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/api-gateway -n bloop-prod --timeout=10m
+          kubectl rollout status deployment/video-service -n bloop-prod --timeout=10m
+          kubectl rollout status deployment/avatar-service -n bloop-prod --timeout=10m
+      
+      - name: Run smoke tests
+        run: |
+          # Wait for services to be ready
+          sleep 30
+          
+          # Test health endpoint
+          curl -f https://api.bloop.ai/health || exit 1
+          
+          # Test API endpoint
+          curl -f https://api.bloop.ai/api/v1/health || exit 1
+      
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment completed successfully!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()
+
+  # Job 6: Rollback on Failure
+  rollback:
+    name: Rollback on Failure
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_PROD }}
+      
+      - name: Rollback deployments
+        run: |
+          kubectl rollout undo deployment/api-gateway -n bloop-prod
+          kubectl rollout undo deployment/video-service -n bloop-prod
+          kubectl rollout undo deployment/avatar-service -n bloop-prod
+      
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'failure'
+          text: 'Production deployment failed! Rollback initiated.'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
