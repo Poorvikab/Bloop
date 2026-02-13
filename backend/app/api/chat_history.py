@@ -21,19 +21,18 @@ def create_chat(chat: ChatCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[ChatResponse])
 def list_chats(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
-    """List all chat sessions"""
-    chats = chat_service.list_chats(db, limit=limit, offset=offset)
-    response = []
-    for chat in chats:
-        msg_count = chat_service.get_message_count(db, chat.chat_id)
-        response.append(ChatResponse(
-            chat_id=chat.chat_id,
-            title=chat.title,
-            created_at=chat.created_at,
-            updated_at=chat.updated_at,
-            message_count=msg_count
-        ))
-    return response
+    chats = chat_service.list_chats_with_count(db, limit, offset)
+
+    return [
+        ChatResponse(
+            chat_id=chat.Chat.chat_id,
+            title=chat.Chat.title,
+            created_at=chat.Chat.created_at,
+            updated_at=chat.Chat.updated_at,
+            message_count=chat.message_count
+        )
+        for chat in chats
+    ]
 
 @router.get("/{chat_id}", response_model=ChatResponse)
 def get_chat(chat_id: UUID, db: Session = Depends(get_db)):
