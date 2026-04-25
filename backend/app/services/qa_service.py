@@ -1,9 +1,11 @@
-from langchain_chroma import Chroma
-from langchain_nomic import NomicEmbeddings
+from __future__ import annotations
+
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
-from core.config import VECTOR_DB_DIR
+from core.config import DEFAULT_USER_ID
 from services.vision_service import extract_text_from_image
+from services.vector_store_service import VectorStoreService
+from services.memory_service import maybe_store_chat_memory
 
 load_dotenv()
 
@@ -15,17 +17,31 @@ llm = ChatGroq(
     max_retries=2,
 )
 
+vector_store = VectorStoreService()
+
 
 SUMMARY_KEYWORDS = [
     "summarize",
     "summary",
     "explain",
     "overview",
+    "chapter",
+    "chapters",
+    "outline",
+    "table of contents",
+    "sections",
     "what is this document about",
     "key points",
     "gist",
     "ELI5"
 ]
+
+
+def _summary_retrieval_bias(question: str) -> str:
+    q = question.lower()
+    if any(keyword in q for keyword in ("chapter", "chapters", "outline", "table of contents", "contents")):
+        return "chapter outline table of contents headings section"
+    return "summary of the document"
 
 def is_summary_question(question: str) -> bool:
     q = question.lower()
@@ -74,11 +90,27 @@ def build_llm_messages(context: list[dict], current_question: str) -> str:
     return "\n".join(history)
 
 
+def build_memory_context(query: str, document_id: str | None, user_id: str) -> str:
+    filters: dict[str, str] = {"user_id": user_id, "record_type": "semantic"}
+    if document_id:
+        filters["document_id"] = document_id
+
+    memories = vector_store.search_text(query, limit=5, filters=filters)
+    lines = []
+    for memory in memories:
+        payload = memory["payload"]
+        content = payload.get("content") or payload.get("text")
+        if content:
+            lines.append(f"- {content}")
+    return "\n".join(lines)
+
+
 def answer_ques(
         question: str | None, 
         document_id: str | None = None,
         image_path: str | None = None,
-        context: list[dict] | None = None
+        context: list[dict] | None = None,
+        user_id: str | None = None,
 ) -> str:
     """
     Answer questions with optional document context and conversation history
@@ -112,61 +144,40 @@ def answer_ques(
     if context:
         conversation_history = build_llm_messages(context, question)
 
+    memory_context = build_memory_context(question, document_id, user_id or DEFAULT_USER_ID)
+
     # RAG: Document-based answering
     if document_id:
-        vector_db = Chroma(
-            collection_name=document_id,
-            embedding_function=NomicEmbeddings(
-                model="nomic-embed-text-v1.5",
-            ),
-            persist_directory=VECTOR_DB_DIR,
-        )
+        retrieval_query = _summary_retrieval_bias(question) if is_summary else question
 
-        retrieval_query = (
-            "summary of the document"
-            if is_summary
-            else question
-        )
-
-        docs_with_score = vector_db.similarity_search_with_score(
+        docs_with_score = vector_store.hybrid_search(
             retrieval_query,
-            k=12
+            limit=12,
+            candidate_limit=40,
+            filters={"user_id": user_id or DEFAULT_USER_ID, "document_id": document_id, "record_type": "document_chunk"},
         )
 
-        for _, score in docs_with_score:
-            print("Similarity score:", score)
-
-        print("Collection:", document_id)
-        print("DB path:", VECTOR_DB_DIR)
-        print("Docs retrieved:", len(docs_with_score))
-
-        if is_summary:
-            docs = [doc for doc, _ in docs_with_score]
-        else:
-            docs = [
-                doc for doc, score in docs_with_score
-                if score < 0.6
-            ]
+        docs = [type("Doc", (), {"page_content": item["payload"].get("text", "")}) for item in docs_with_score]
 
         if not docs:
             return "I don't know."
 
-        doc_context = "\n".join(doc.page_content for doc in docs)
+        doc_context = "\n".join(doc.page_content for doc in docs if doc.page_content)
 
         # Build prompt based on summary or specific question
         if is_summary:
-            # Build conversation context separately to avoid backslash in f-string
-            conv_prefix = ""
-            if conversation_history:
-                conv_prefix = f"Previous conversation:\n{conversation_history}\n\n"
+            mem_prefix = ""
+            if memory_context:
+                mem_prefix = f"Relevant memory:\n{memory_context}\n\n"
             
             prompt = f"""
 You are an educational assistant.
 Using ONLY the document content below, answer the user's request.
-You may summarize, explain, or reorganize the information,
-but do NOT add information not present in the document.
+If the user asks for chapters, outline, or table of contents, return only the chapter or section headings.
+Do not include `User:` or `Assistant:` labels.
+Do not add information not present in the document.
 
-{conv_prefix}Document:
+{mem_prefix}Document:
 {doc_context}
 
 Task:
@@ -179,6 +190,9 @@ Answer:
             conv_prefix = ""
             if conversation_history:
                 conv_prefix = f"Previous conversation:\n{conversation_history}\n\n"
+            mem_prefix = ""
+            if memory_context:
+                mem_prefix = f"Relevant memory:\n{memory_context}\n\n"
             
             prompt = f"""
 You are an educational assistant.
@@ -186,7 +200,7 @@ Answer the question ONLY using the context below.
 If the answer is not present in the context, reply with:
 "I don't know."
 
-{conv_prefix}Context:
+{mem_prefix}{conv_prefix}Context:
 {doc_context}
 
 Question:
@@ -222,4 +236,14 @@ Answer:
 """
 
     response = llm.invoke(prompt)
-    return response.content.strip()
+    answer = response.content.strip()
+
+    maybe_store_chat_memory(
+        user_id=user_id or DEFAULT_USER_ID,
+        document_id=document_id,
+        question=question,
+        answer=answer,
+        context=context or [],
+    )
+
+    return answer

@@ -1,6 +1,3 @@
-node_modules
-__pycache__
-manimenv
 .env
 /venv
 __pycache__/
@@ -18,10 +15,4 @@ __pycache__/
 /tests/temp/
 coverage.xml
 media/
-venv/
-venv
-manimEnvironment
-manimEnvironment/
-/manimEnvironment
-actiandb_docs/
-actiandb_examples/
+# outputs/

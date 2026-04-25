@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from core.database import get_db
+from core.config import DEFAULT_USER_ID
 from core.schemas import ChatCreate, ChatResponse, MessageResponse
 from services import chat_service, message_service
 from uuid import UUID

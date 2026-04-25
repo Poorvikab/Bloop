@@ -25,6 +25,7 @@ os.makedirs(VECTOR_DB_DIR, exist_ok=True)
 # DATABASE
 # ==============================
 NEON_DATABASE_URL = os.getenv("NEON_DB_URL")
+DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "legacy-user")
 
 # ==============================
 # API KEYS (ENVIRONMENT VARIABLES)

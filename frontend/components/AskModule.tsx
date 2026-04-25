@@ -51,6 +51,7 @@ const AskModule: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSpokenIndexRef = useRef<number>(-1);
+  const videoPollersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   // --- Effects ---
   useEffect(() => {
@@ -67,6 +68,13 @@ const AskModule: React.FC = () => {
       localStorage.setItem('bloop_active_chat', activeChat);
     }
   }, [activeChat]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(videoPollersRef.current).forEach(clearInterval);
+      videoPollersRef.current = {};
+    };
+  }, []);
 
   // --- Voice Output Effect ---
   useEffect(() => {
@@ -141,6 +149,9 @@ const AskModule: React.FC = () => {
           isVideoProcessing: !!msg.video_ids?.[0]
         }));
         setMessages(transformedMessages);
+
+        Object.values(videoPollersRef.current).forEach(clearInterval);
+        videoPollersRef.current = {};
         
         // Start polling for any processing videos
         transformedMessages.forEach((msg: ChatMessage, idx: number) => {
@@ -217,6 +228,10 @@ const AskModule: React.FC = () => {
 
   // --- Video Polling Function ---
   const pollVideoStatus = async (videoId: string, messageIndex: number) => {
+    if (videoPollersRef.current[videoId]) {
+      return;
+    }
+
     const maxAttempts = 100;
     let attempts = 0;
 
@@ -225,6 +240,7 @@ const AskModule: React.FC = () => {
       
       if (attempts > maxAttempts) {
         clearInterval(interval);
+        delete videoPollersRef.current[videoId];
         setMessages(prev => prev.map((msg, idx) => 
           idx === messageIndex 
             ? { ...msg, isVideoProcessing: false, videoError: 'Video generation timeout' }
@@ -246,11 +262,14 @@ const AskModule: React.FC = () => {
           ));
           
           clearInterval(interval);
+          delete videoPollersRef.current[videoId];
         }
       } catch (error) {
         // Still processing, continue polling
       }
     }, 3000);
+
+    videoPollersRef.current[videoId] = interval;
   };
 
   // --- Helpers for Rendering ---
