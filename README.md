@@ -789,11 +789,3 @@ A: PDF, DOCX, TXT, and plain text input are all supported for content generation
 - **All Contributors** who made this possible
 
 ---
-<div align="center">
-
-
-### Ready to transform education?
-
-[Read Docs](https://chartreuse-vest-a4b.notion.site/Bloop-2d9dbad1b5d380ecb859dd25b9e4acf3)
-
-</div>
