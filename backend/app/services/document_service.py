@@ -1,15 +1,21 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_chroma import Chroma
-from langchain_nomic import NomicEmbeddings
-from core.config import VECTOR_DB_DIR
-from core.models import Document
-from sqlalchemy.orm import Session
-from uuid import UUID
+from __future__ import annotations
+
 import uuid
+from uuid import UUID
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sqlalchemy.orm import Session
+
+from core.models import Document
+from core.config import DEFAULT_USER_ID
+from services.vector_store_service import VectorRecord, VectorStoreService
 
 
-def ingest_document(file_path: str, chat_id: UUID, db: Session) -> str:
+vector_store = VectorStoreService()
+
+
+def ingest_document(file_path: str, chat_id: UUID, db: Session, user_id: str | None = None) -> str:
     """
     Ingest a PDF document: chunk, embed, store in vector DB and metadata in Neon DB
     
@@ -33,21 +39,30 @@ def ingest_document(file_path: str, chat_id: UUID, db: Session) -> str:
     chunks = splitter.split_documents(docs)
 
     # Create embeddings
-    embeddings = NomicEmbeddings(
-        model="nomic-embed-text-v1.5"
-    )
-
     # Generate document ID
     doc_id = str(uuid.uuid4())
 
-    # Store in vector database (Chroma)
-    vector_db = Chroma(
-        collection_name=doc_id,
-        embedding_function=embeddings,
-        persist_directory=VECTOR_DB_DIR
-    )
+    resolved_user_id = user_id or DEFAULT_USER_ID
+    records = []
+    for index, chunk in enumerate(chunks):
+        records.append(
+            VectorRecord(
+                id=f"{doc_id}:{index}",
+                vector=vector_store.embed_text(chunk.page_content),
+                payload={
+                    "record_type": "document_chunk",
+                    "scope": "document",
+                    "user_id": resolved_user_id,
+                    "chat_id": str(chat_id) if chat_id else None,
+                    "document_id": doc_id,
+                    "chunk_index": index,
+                    "text": chunk.page_content,
+                    "source": file_path,
+                },
+            )
+        )
 
-    vector_db.add_documents(chunks)
+    vector_store.upsert(records)
 
     # Extract file metadata
     file_name = file_path.split("/")[-1].replace("\\", "/").split("/")[-1]
@@ -70,24 +85,5 @@ def ingest_document(file_path: str, chat_id: UUID, db: Session) -> str:
     return doc_id
 
 
-def get_vector_db_for_document(doc_id: str) -> Chroma:
-    """
-    Retrieve the vector database for a specific document
-    
-    Args:
-        doc_id: Document UUID as string
-    
-    Returns:
-        Chroma vector database instance
-    """
-    embeddings = NomicEmbeddings(
-        model="nomic-embed-text-v1.5"
-    )
-    
-    vector_db = Chroma(
-        collection_name=doc_id,
-        embedding_function=embeddings,
-        persist_directory=VECTOR_DB_DIR
-    )
-    
-    return vector_db
+def get_vector_db_for_document(doc_id: str):
+    return vector_store, doc_id

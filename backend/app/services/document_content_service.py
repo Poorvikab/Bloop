@@ -1,32 +1,17 @@
-import re
-from langchain_chroma import Chroma
-from langchain_nomic import NomicEmbeddings
+from __future__ import annotations
 
-VECTOR_DB_DIR = "vectorstore/chroma_db"
+from services.vector_store_service import VectorStoreService
+from core.config import DEFAULT_USER_ID
 
 
-def validate_collection_name(name: str) -> bool:
-    # Regex to check if the collection name is valid (alphanumeric, underscores, dashes, and periods)
-    pattern = r'^[a-zA-Z0-9._-]{3,512}$'
-    return bool(re.match(pattern, name))
+vector_store = VectorStoreService()
 
 
 def get_document_chunks(document_id: str, k: int = 15) -> list[str]:
-    # Validate document_id before using it as a collection name
-    if not validate_collection_name(document_id):
-        raise ValueError(f"Invalid collection name: {document_id}. Must match [a-zA-Z0-9._-], and be 3-512 characters.")
-
-    vector_db = Chroma(
-        collection_name=document_id,  # This is now validated
-        embedding_function=NomicEmbeddings(
-            model="nomic-embed-text-v1.5"
-        ),
-        persist_directory=VECTOR_DB_DIR
+    query_vector = vector_store.embed_text("core concepts and key ideas of the document")
+    results = vector_store.search(
+        query_vector,
+        limit=k,
+        filters={"user_id": DEFAULT_USER_ID, "document_id": document_id, "record_type": "document_chunk"},
     )
-
-    docs = vector_db.similarity_search(
-        "core concepts and key ideas of the document",
-        k=k
-    )
-
-    return [doc.page_content for doc in docs]
+    return [item["payload"].get("text", "") for item in results]

@@ -6,6 +6,8 @@ from services.qa_service import answer_ques
 from services.sad_talker_service import run_sadtalker
 from services.tts_service import text_to_speech
 from services import chat_service, message_service
+from core.config import DEFAULT_USER_ID
+from services.vector_store_service import VectorStoreService
 from utils.file_utils import save_file
 from core.config import DOCUMENT_UPLOAD_DIR
 from uuid import UUID
@@ -13,6 +15,7 @@ import uuid
 import requests
 
 router = APIRouter(prefix="/qa", tags=["Document Ask Endpoints"])
+vector_store = VectorStoreService()
 
 MANIM_SERVICE_URL = "http://127.0.0.1:8001/explain"
 
@@ -20,6 +23,7 @@ MANIM_SERVICE_URL = "http://127.0.0.1:8001/explain"
 async def upload_file(
     file: UploadFile = File(...),
     chat_id: UUID | None = Query(None),  # Made optional
+    user_id: str = Query(DEFAULT_USER_ID),
     db: Session = Depends(get_db)
 ):
     """Upload a document to a chat session (or standalone for Plan module)"""
@@ -34,7 +38,7 @@ async def upload_file(
     file_path = save_file(file, DOCUMENT_UPLOAD_DIR)
     
     # Ingest document
-    doc_id = ingest_document(file_path, chat_id, db)
+    doc_id = ingest_document(file_path, chat_id, db, user_id=user_id)
     
     # Only store message if chat_id provided
     if chat_id:
@@ -61,6 +65,7 @@ async def ask_question(
     document_id: str | None = None,
     video_enabled: bool = False,
     face_enabled: bool = False,
+    user_id: str = Query(DEFAULT_USER_ID),
     db: Session = Depends(get_db)
 ):
     """Ask a question in a chat session"""
@@ -97,7 +102,7 @@ async def ask_question(
     )
     
     # Generate answer with context
-    answer = answer_ques(question, document_id, context=context)
+    answer = answer_ques(question, document_id, context=context, user_id=user_id)
     
     response = {
         "answer": answer,
@@ -161,6 +166,7 @@ def ask_from_image(
     video_enabled: bool = False,
     face_enabled: bool = False,
     image_path: str = "D:/bloop/data/avatars/sir-isaac-newton.webp",
+    user_id: str = Query(DEFAULT_USER_ID),
     db: Session = Depends(get_db)
 ):
     """Ask a question from an image in a chat session"""
@@ -194,7 +200,8 @@ def ask_from_image(
         question=None,
         document_id=document_id,
         image_path=path,
-        context=context
+        context=context,
+        user_id=user_id
     )
     
     response = {
@@ -231,3 +238,37 @@ def ask_from_image(
     chat_service.update_chat_timestamp(db, chat_id)
     
     return response
+
+
+@router.get("/debug/memory-search")
+def debug_memory_search(
+    query: str,
+    document_id: str | None = None,
+    chat_id: str | None = None,
+    user_id: str = DEFAULT_USER_ID,
+    scope: str | None = None,
+    record_type: str | None = None,
+    limit: int = 10,
+):
+    filters = {"user_id": user_id}
+    if scope:
+        filters["scope"] = scope
+    if record_type:
+        filters["record_type"] = record_type
+    if document_id:
+        filters["document_id"] = document_id
+    if chat_id:
+        filters["chat_id"] = chat_id
+
+    memories = vector_store.search_text(query, limit=limit, filters=filters)
+    return {
+        "query": query,
+        "document_id": document_id,
+        "chat_id": chat_id,
+        "user_id": user_id,
+        "scope": scope,
+        "record_type": record_type,
+        "filters": filters,
+        "count": len(memories),
+        "memories": memories,
+    }
