@@ -33,3 +33,19 @@ def extract_text_from_image(image_path: str) -> str:
             lines.append(line.text)
 
     return "\n".join(lines)
+
+
+def extract_image_caption(image_path: str) -> str:
+    with open(image_path, "rb") as f:
+        image_data = f.read()
+
+    result = client.analyze(
+        image_data=image_data,
+        visual_features=[VisualFeatures.CAPTION],
+    )
+
+    caption = getattr(result, "caption", None)
+    if caption and getattr(caption, "text", None):
+        return str(caption.text)
+
+    return ""

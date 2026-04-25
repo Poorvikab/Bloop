@@ -8,6 +8,8 @@ from services.tts_service import text_to_speech
 from services import chat_service, message_service
 from core.config import DEFAULT_USER_ID
 from services.vector_store_service import VectorStoreService
+from services.video_artifact_service import VideoArtifactService
+from services.image_artifact_service import ImageArtifactService
 from utils.file_utils import save_file
 from core.config import DOCUMENT_UPLOAD_DIR
 from uuid import UUID
@@ -16,6 +18,8 @@ import requests
 
 router = APIRouter(prefix="/qa", tags=["Document Ask Endpoints"])
 vector_store = VectorStoreService()
+video_artifact_service = VideoArtifactService("manim_generation_pipeline")
+image_artifact_service = ImageArtifactService()
 
 MANIM_SERVICE_URL = "http://127.0.0.1:8001/explain"
 
@@ -124,7 +128,7 @@ async def ask_question(
         try:
             manim_response = requests.post(
                 MANIM_SERVICE_URL,
-                params=manim_payload,
+                data=manim_payload,
                 timeout=300
             )
             
@@ -134,6 +138,10 @@ async def ask_question(
                 if video_id:
                     video_ids.append(video_id)
                     response["video_id"] = video_id
+                    try:
+                        video_artifact_service.ingest_video_outputs(video_id)
+                    except Exception as ingest_error:
+                        response["video_ingest_error"] = str(ingest_error)
                 
                 response.update({
                     "video_status": "processing",
@@ -183,6 +191,11 @@ def ask_from_image(
     
     job_id = str(uuid.uuid4())
     path = save_file(image, "data/uploads/images")
+    try:
+        image_artifact_service.ingest_image(path, image_id=job_id, user_id=user_id, chat_id=str(chat_id))
+    except Exception as ingest_error:
+        # Keep the core request working if image indexing fails.
+        print(f"Image ingest failed: {ingest_error}")
     
     # Get conversation history
     messages = message_service.get_messages(db, chat_id)

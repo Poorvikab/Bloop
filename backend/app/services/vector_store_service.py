@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 import hashlib
 import math
+import re
 import uuid
 
 from actian_vectorai import Distance, Field, FilterBuilder, PointStruct, VectorAIClient, VectorParams
@@ -134,6 +135,129 @@ class VectorStoreService:
         filters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         return self.search(self.embed_text(query_text), limit=limit, filters=filters)
+
+    def hybrid_search(
+        self,
+        query_text: str,
+        *,
+        limit: int = 15,
+        filters: dict[str, Any] | None = None,
+        candidate_limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        if not query_text.strip():
+            return []
+
+        semantic_results = self.search_text(query_text, limit=candidate_limit, filters=filters)
+        lexical_results = self._lexical_rank(query_text, semantic_results)
+        return self._reciprocal_rank_fusion([semantic_results, lexical_results], limit=limit)
+
+    def _lexical_rank(
+        self,
+        query_text: str,
+        candidates: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        query_terms = self._tokenize(query_text)
+        if not query_terms:
+            return []
+
+        ranked: list[dict[str, Any]] = []
+        for item in candidates:
+            payload = item.get("payload") or {}
+            text = str(payload.get("text") or payload.get("content") or "")
+            if not text:
+                continue
+
+            text_terms = self._tokenize(text)
+            if not text_terms:
+                continue
+
+            overlap = query_terms & text_terms
+            if not overlap:
+                continue
+
+            heading_boost = 0.0
+            if self._looks_like_heading(text):
+                heading_boost = 0.25
+
+            score = (len(overlap) / len(query_terms)) + heading_boost
+            ranked.append({"id": item["id"], "score": score, "payload": payload})
+
+        ranked.sort(key=lambda item: item["score"], reverse=True)
+        return ranked
+
+    def _tokenize(self, text: str) -> set[str]:
+        tokens = re.findall(r"[a-z0-9]+", text.lower())
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "to",
+            "of",
+            "in",
+            "on",
+            "for",
+            "is",
+            "are",
+            "this",
+            "that",
+            "what",
+            "which",
+            "with",
+            "by",
+            "be",
+            "from",
+            "as",
+            "at",
+            "it",
+            "i",
+            "we",
+            "you",
+            "me",
+            "my",
+            "our",
+            "these",
+            "those",
+            "how",
+            "when",
+            "where",
+            "why",
+            "who",
+        }
+        return {token for token in tokens if token not in stopwords and len(token) > 1}
+
+    def _looks_like_heading(self, text: str) -> bool:
+        stripped = text.strip().lower()
+        return (
+            stripped.startswith("chapter")
+            or stripped.startswith("section")
+            or stripped.startswith("unit")
+            or stripped.startswith("module")
+            or stripped.startswith("table of contents")
+            or stripped.startswith("contents")
+        )
+
+    def _reciprocal_rank_fusion(
+        self,
+        result_sets: list[list[dict[str, Any]]],
+        *,
+        limit: int = 15,
+        ranking_constant_k: int = 60,
+    ) -> list[dict[str, Any]]:
+        scores: dict[str, dict[str, Any]] = {}
+
+        for results in result_sets:
+            for rank, item in enumerate(results, start=1):
+                item_id = str(item["id"])
+                entry = scores.setdefault(item_id, {"id": item_id, "score": 0.0, "payload": item.get("payload") or {}})
+                entry["score"] += 1.0 / (ranking_constant_k + rank)
+                if not entry["payload"]:
+                    entry["payload"] = item.get("payload") or {}
+
+        fused = list(scores.values())
+        fused.sort(key=lambda item: item["score"], reverse=True)
+        return fused[:limit]
 
     def delete_by_filter(self, filters: dict[str, Any]) -> None:
         with self._client() as client:

@@ -36,6 +36,13 @@ SUMMARY_KEYWORDS = [
     "ELI5"
 ]
 
+
+def _summary_retrieval_bias(question: str) -> str:
+    q = question.lower()
+    if any(keyword in q for keyword in ("chapter", "chapters", "outline", "table of contents", "contents")):
+        return "chapter outline table of contents headings section"
+    return "summary of the document"
+
 def is_summary_question(question: str) -> bool:
     q = question.lower()
     return any(k in q for k in SUMMARY_KEYWORDS)
@@ -141,16 +148,12 @@ def answer_ques(
 
     # RAG: Document-based answering
     if document_id:
-        retrieval_query = (
-            "summary of the document"
-            if is_summary
-            else question
-        )
+        retrieval_query = _summary_retrieval_bias(question) if is_summary else question
 
-        query_vector = vector_store.embed_text(retrieval_query)
-        docs_with_score = vector_store.search(
-            query_vector,
+        docs_with_score = vector_store.hybrid_search(
+            retrieval_query,
             limit=12,
+            candidate_limit=40,
             filters={"user_id": user_id or DEFAULT_USER_ID, "document_id": document_id, "record_type": "document_chunk"},
         )
 
