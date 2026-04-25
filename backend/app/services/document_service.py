@@ -43,12 +43,13 @@ def ingest_document(file_path: str, chat_id: UUID, db: Session, user_id: str | N
     doc_id = str(uuid.uuid4())
 
     resolved_user_id = user_id or DEFAULT_USER_ID
+    embeddings = vector_store.embed_texts([chunk.page_content for chunk in chunks])
     records = []
     for index, chunk in enumerate(chunks):
         records.append(
             VectorRecord(
                 id=f"{doc_id}:{index}",
-                vector=vector_store.embed_text(chunk.page_content),
+                vector=embeddings[index],
                 payload={
                     "record_type": "document_chunk",
                     "scope": "document",

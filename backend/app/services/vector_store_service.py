@@ -8,6 +8,7 @@ import math
 import uuid
 
 from actian_vectorai import Distance, Field, FilterBuilder, PointStruct, VectorAIClient, VectorParams
+from langchain_nomic import NomicEmbeddings
 
 from core.config import DEFAULT_USER_ID
 
@@ -15,6 +16,7 @@ from core.config import DEFAULT_USER_ID
 ACTIAN_VECTORAI_URL = os.getenv("ACTIAN_VECTORAI_URL", "localhost:50051")
 ACTIAN_COLLECTION_NAME = os.getenv("ACTIAN_COLLECTION_NAME", "bloop_memory")
 VECTOR_DIMENSION = int(os.getenv("VECTOR_DIMENSION", "768"))
+NOMIC_MODEL = os.getenv("NOMIC_MODEL", "nomic-embed-text-v1.5")
 
 
 @dataclass(frozen=True)
@@ -28,12 +30,30 @@ class VectorStoreService:
     def __init__(self, url: str | None = None, collection_name: str | None = None):
         self.url = url or ACTIAN_VECTORAI_URL
         self.collection_name = collection_name or ACTIAN_COLLECTION_NAME
+        self._nomic_embeddings: NomicEmbeddings | None = None
 
     def _client(self) -> VectorAIClient:
         return VectorAIClient(self.url)
 
     def embed_text(self, text: str) -> list[float]:
-        return self._fallback_embed(text)
+        try:
+            return self._nomic().embed_query(text)
+        except Exception:
+            return self._fallback_embed(text)
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        try:
+            return self._nomic().embed_documents(texts)
+        except Exception:
+            return [self._fallback_embed(text) for text in texts]
+
+    def _nomic(self) -> NomicEmbeddings:
+        if self._nomic_embeddings is None:
+            self._nomic_embeddings = NomicEmbeddings(model=NOMIC_MODEL)
+        return self._nomic_embeddings
 
     def _fallback_embed(self, text: str) -> list[float]:
         digest = hashlib.sha256(text.encode("utf-8")).digest()
